@@ -11,21 +11,31 @@ sys.path.insert(0, str(_p))
 from db.dataraflow_db import run_query
 
 # File for local caching incase of IP change
-CSV_PATH = pathlib.Path("london_2014.csv")
+def get_table(table_name: str, schema: str = "week06", force_refresh: bool = False) -> pd.DataFrame:
+    """Load data from local CSV if it exists; otherwise fetch from DB and save to CSV.
+    If the online DB is unreachable, automatically falls back to the local CSV copy.
+    """
+    csv_path = pathlib.Path(f"{table_name}.csv")
+    if csv_path.exists() and not force_refresh:
+        print(f"Loading cached data from {csv_path}...")
+        return pd.read_csv(csv_path)
+
+    try:
+        print(f"Querying online Azure SQL Database ({schema}.{table_name})...")
+        df = run_query(f"SELECT * FROM {schema}.{table_name}")
+        df.to_csv(csv_path, index=False)
+        print(f"Successfully saved {len(df)} rows to {csv_path}")
+        return df
+    except Exception as e:
+        print(f"Online database query failed: {e}")
+        if csv_path.exists():
+            print(f"Falling back to local copy at {csv_path}...")
+            return pd.read_csv(csv_path)
+        raise RuntimeError(f"Online database unavailable and no local copy found for {table_name}.") from e
 
 def get_data(force_refresh: bool = False) -> pd.DataFrame:
-    """Load data from local CSV if it exists: otherwise fetch from DB and save to CSV."""
-    if CSV_PATH.exists() and not force_refresh:
-        print(f"Loading cached fata from {CSV_PATH}...")
-        return pd.read_csv(CSV_PATH)
-
-    print("Local cache missing...")
-    print("Querying Azure SQL Database (week0g.london_2014)...")
-    df = run_query("SELECT * FROM week06.london_2014")
-
-    # Save to local CSV for offline use
-    df.to_csv(CSV_PATH, index=False)
-    print(f"Successfully saved {len(df)} rows to {CSV_PATH}")
+    """Load London 2014 data from local CSV if it exists; otherwise fetch from DB and save to CSV."""
+    return get_table("london_2014", force_refresh=force_refresh)
 
 
 

@@ -18,8 +18,7 @@ def get_engine():
         host = os.environ["SQL_SERVER_NAME"] 
         db = os.environ["SQL_SERVER_DATABASE"] 
         _engine = create_engine( f"mssql+pymssql://{user}:{pwd}@{host}:1433/{db}?tds_version=7.4", connect_args={"login_timeout": 15, "timeout": 30}, ) 
-
-        return _engine
+    return _engine
 
 def get_connection(): 
     """Open a raw read-only pymssql connection (for manual cursor use).""" 
